@@ -22,6 +22,7 @@ static const char *get_name(void *type_data)
 static void *create(obs_data_t *settings, obs_source_t *source)
 {
 	UNUSED_PARAMETER(settings);
+	UNUSED_PARAMETER(source);
 
 	struct main_view_s *s = bzalloc(sizeof(struct main_view_s));
 
