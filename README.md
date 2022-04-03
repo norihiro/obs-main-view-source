@@ -17,6 +17,8 @@ If enabled, the previous frame will be displayed if the source is nested. Also s
 
 ### Max depth to render nested source
 
+Not available for macOS due to a technical issue.
+
 Recursively render even if the source is nested.
 Unlike `Cache the main view`, the frame will be rendered without delay.
 

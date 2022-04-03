@@ -34,7 +34,9 @@ static obs_properties_t *get_properties(void *data)
 	obs_properties_t *props = obs_properties_create();
 
 	obs_properties_add_bool(props, "cache", obs_module_text("Cache the main view"));
+#ifdef __APPLE__
 	obs_properties_add_int(props, "max_rendering", obs_module_text("Max depth to render nested source"), 0, 16, 1);
+#endif // __APPLE__
 
 	return props;
 }
