@@ -5,13 +5,9 @@
 
 struct main_view_s
 {
-	int rendering;
-	bool rendering_cache;
-	bool getting_size;
+	bool rendering;
 
 	obs_weak_source_t *weak_source;
-	uint32_t last_width;
-	uint32_t last_height;
 
 	gs_texrender_t *texrender;
 	gs_texrender_t *texrender_prev;
@@ -19,7 +15,6 @@ struct main_view_s
 
 	// properties
 	bool cache;
-	int max_rendering;
 };
 
 static const char *get_name(void *type_data)
@@ -34,9 +29,6 @@ static obs_properties_t *get_properties(void *data)
 	obs_properties_t *props = obs_properties_create();
 
 	obs_properties_add_bool(props, "cache", obs_module_text("Cache the main view"));
-#ifdef __APPLE__
-	obs_properties_add_int(props, "max_rendering", obs_module_text("Max depth to render nested source"), 0, 16, 1);
-#endif // __APPLE__
 
 	return props;
 }
@@ -46,7 +38,6 @@ static void update(void *data, obs_data_t *settings)
 	struct main_view_s *s = data;
 
 	s->cache = obs_data_get_bool(settings, "cache");
-	s->max_rendering = (int)obs_data_get_int(settings, "max_rendering");
 }
 
 static void *create(obs_data_t *settings, obs_source_t *source)
@@ -66,8 +57,10 @@ static void destroy(void *data)
 	struct main_view_s *s = data;
 
 	obs_weak_source_release(s->weak_source);
+	obs_enter_graphics();
 	gs_texrender_destroy(s->texrender);
 	gs_texrender_destroy(s->texrender_prev);
+	obs_leave_graphics();
 
 	bfree(s);
 }
@@ -105,9 +98,7 @@ static void cache_video(struct main_view_s *s, obs_source_t *target)
 		gs_ortho(0.0f, (float)width, 0.0f, (float)height, -100.0f, 100.0f);
 
 		gs_blend_state_push();
-		s->rendering_cache = true;
 		obs_source_video_render(target);
-		s->rendering_cache = false;
 		gs_blend_state_pop();
 		gs_texrender_end(texrender);
 
@@ -143,22 +134,22 @@ static void video_render(void *data, gs_effect_t *effect)
 		return;
 	}
 
-	if (s->rendering > s->max_rendering) {
-		if (s->cache)
+	bool cache = s->cache;
+	if (s->rendering) {
+		if (cache)
 			render_cached_video(s);
 		return;
 	}
 
 	obs_source_t *target = obs_weak_source_get_source(s->weak_source);
-	bool cache = s->cache && !s->rendering_cache;
 	if (target) {
-		s->rendering++;
+		s->rendering = true;
 		if (cache)
 			cache_video(s, target);
 		else
 			obs_source_video_render(target);
 		obs_source_release(target);
-		s->rendering--;
+		s->rendering = false;
 	}
 
 	if (cache && s->rendered)
@@ -167,38 +158,24 @@ static void video_render(void *data, gs_effect_t *effect)
 
 static uint32_t get_width(void *data)
 {
-	struct main_view_s *s = data;
+	UNUSED_PARAMETER(data);
 
-	if (s->getting_size)
-		return s->last_width;
+	struct obs_video_info ovi;
+	if (!obs_get_video_info(&ovi))
+		return 0;
 
-	obs_source_t *target = obs_weak_source_get_source(s->weak_source);
-	if (target) {
-		s->getting_size = true;
-		s->last_width = obs_source_get_width(target);
-		obs_source_release(target);
-		s->getting_size = false;
-	}
-
-	return s->last_width;
+	return ovi.base_width;
 }
 
 static uint32_t get_height(void *data)
 {
-	struct main_view_s *s = data;
+	UNUSED_PARAMETER(data);
 
-	if (s->getting_size)
-		return s->last_height;
+	struct obs_video_info ovi;
+	if (!obs_get_video_info(&ovi))
+		return 0;
 
-	obs_source_t *target = obs_weak_source_get_source(s->weak_source);
-	if (target) {
-		s->getting_size = true;
-		s->last_height = obs_source_get_height(target);
-		obs_source_release(target);
-		s->getting_size = false;
-	}
-
-	return s->last_height;
+	return ovi.base_height;
 }
 
 const struct obs_source_info main_view_source = {

@@ -15,13 +15,6 @@ No properties are provided.
 Cache texture of the main view at the first rendering and reuse the cached texture for the later rendering.
 If enabled, the previous frame will be displayed if the source is nested. Also scene items overflowing the texture will be cropped.
 
-### Max depth to render nested source
-
-Not available for macOS due to a technical issue.
-
-Recursively render even if the source is nested.
-Unlike `Cache the main view`, the frame will be rendered without delay.
-
 ## Build and install
 ### Linux
 Use cmake to build on Linux. After checkout, run these commands.
