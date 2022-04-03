@@ -6,6 +6,7 @@
 struct main_view_s
 {
 	int rendering;
+	bool rendering_cache;
 	bool getting_size;
 
 	obs_weak_source_t *weak_source;
@@ -102,7 +103,9 @@ static void cache_video(struct main_view_s *s, obs_source_t *target)
 		gs_ortho(0.0f, (float)width, 0.0f, (float)height, -100.0f, 100.0f);
 
 		gs_blend_state_push();
+		s->rendering_cache = true;
 		obs_source_video_render(target);
+		s->rendering_cache = false;
 		gs_blend_state_pop();
 		gs_texrender_end(texrender);
 
@@ -147,7 +150,7 @@ static void video_render(void *data, gs_effect_t *effect)
 	obs_source_t *target = obs_weak_source_get_source(s->weak_source);
 	if (target) {
 		s->rendering++;
-		if (s->cache)
+		if (s->cache && !s->rendering_cache)
 			cache_video(s, target);
 		else
 			obs_source_video_render(target);
