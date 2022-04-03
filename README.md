@@ -10,6 +10,11 @@ This plugin is compatible with Source Record filter and Dedicated NDI filter.
 
 No properties are provided.
 
+### Cache the main view
+
+Cache texture of the main view at the first rendering and reuse the cached texture for the later rendering.
+If enabled, the previous frame will be displayed if the source is nested. Also scene items overflowing the texture will be cropped.
+
 ## Build and install
 ### Linux
 Use cmake to build on Linux. After checkout, run these commands.
