@@ -5,7 +5,7 @@
 
 struct main_view_s
 {
-	bool rendering;
+	int rendering;
 	bool getting_size;
 
 	obs_weak_source_t *weak_source;
@@ -18,6 +18,7 @@ struct main_view_s
 
 	// properties
 	bool cache;
+	int max_rendering;
 };
 
 static const char *get_name(void *type_data)
@@ -32,6 +33,7 @@ static obs_properties_t *get_properties(void *data)
 	obs_properties_t *props = obs_properties_create();
 
 	obs_properties_add_bool(props, "cache", obs_module_text("Cache the main view"));
+	obs_properties_add_int(props, "max_rendering", obs_module_text("Max depth to render nested source"), 0, 16, 1);
 
 	return props;
 }
@@ -41,6 +43,7 @@ static void update(void *data, obs_data_t *settings)
 	struct main_view_s *s = data;
 
 	s->cache = obs_data_get_bool(settings, "cache");
+	s->max_rendering = (int)obs_data_get_int(settings, "max_rendering");
 }
 
 static void *create(obs_data_t *settings, obs_source_t *source)
@@ -135,7 +138,7 @@ static void video_render(void *data, gs_effect_t *effect)
 		return;
 	}
 
-	if (s->rendering) {
+	if (s->rendering > s->max_rendering) {
 		if (s->cache)
 			render_cached_video(s);
 		return;
@@ -143,13 +146,13 @@ static void video_render(void *data, gs_effect_t *effect)
 
 	obs_source_t *target = obs_weak_source_get_source(s->weak_source);
 	if (target) {
-		s->rendering = true;
+		s->rendering++;
 		if (s->cache)
 			cache_video(s, target);
 		else
 			obs_source_video_render(target);
 		obs_source_release(target);
-		s->rendering = false;
+		s->rendering--;
 	}
 
 	if (s->cache && s->rendered)
