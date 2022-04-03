@@ -148,9 +148,10 @@ static void video_render(void *data, gs_effect_t *effect)
 	}
 
 	obs_source_t *target = obs_weak_source_get_source(s->weak_source);
+	bool cache = s->cache && !s->rendering_cache;
 	if (target) {
 		s->rendering++;
-		if (s->cache && !s->rendering_cache)
+		if (cache)
 			cache_video(s, target);
 		else
 			obs_source_video_render(target);
@@ -158,7 +159,7 @@ static void video_render(void *data, gs_effect_t *effect)
 		s->rendering--;
 	}
 
-	if (s->cache && s->rendered)
+	if (cache && s->rendered)
 		render_cached_video(s);
 }
 
