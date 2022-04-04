@@ -98,7 +98,7 @@ static void cache_video(struct main_view_s *s, obs_source_t *target)
 		gs_ortho(0.0f, (float)width, 0.0f, (float)height, -100.0f, 100.0f);
 
 		gs_blend_state_push();
-		gs_reset_blend_state();
+		gs_blend_function(GS_BLEND_ONE, GS_BLEND_INVSRCALPHA);
 		obs_source_video_render(target);
 		gs_blend_state_pop();
 		gs_texrender_end(texrender);
@@ -116,6 +116,9 @@ static void render_cached_video(struct main_view_s *s)
 	if (!tex)
 		return;
 
+	gs_blend_state_push();
+	gs_blend_function(GS_BLEND_ONE, GS_BLEND_INVSRCALPHA);
+
 	gs_effect_t *effect = obs_get_base_effect(OBS_EFFECT_DEFAULT);
 	gs_effect_set_texture(gs_effect_get_param_by_name(effect, "image"), tex);
 	uint32_t cx = gs_texture_get_width(tex);
@@ -123,6 +126,8 @@ static void render_cached_video(struct main_view_s *s)
 
 	while (gs_effect_loop(effect, "Draw"))
 		gs_draw_sprite(tex, 0, cx, cy);
+
+	gs_blend_state_pop();
 }
 
 static void video_render(void *data, gs_effect_t *effect)
