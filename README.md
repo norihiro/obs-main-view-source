@@ -14,6 +14,9 @@ No properties are provided.
 
 Cache texture of the main view at the first rendering and reuse the cached texture for the later rendering.
 If enabled, the previous frame will be displayed if the source is nested. Also scene items overflowing the texture will be cropped.
+Enable this setting if one of these conditions applies.
+- You want to hide overflowing scene items outside the bounding box of the main view.
+- You want to put the source on the main view to enjoy fractals.
 
 ## Build and install
 ### Linux
