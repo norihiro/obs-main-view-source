@@ -28,7 +28,7 @@ Recommended to enable if
 
 If enabled, since the order of rendering sources changes, something might be affected.
 
-If no issues are reported with disabling this property, this property might be dropped in the future and fixed to enabled.
+If no issues are reported without disabling this property, this property might be dropped in the future and fixed to enabled. If you need this property, please file an issue not to deprecate.
 
 ## Build and install
 ### Linux
