@@ -8,8 +8,6 @@ This plugin is compatible with Source Record filter and Dedicated NDI filter.
 
 ## Properties
 
-No properties are provided.
-
 ### Cache the main view
 
 Cache texture of the main view at the first rendering and reuse the cached texture for the later rendering.
