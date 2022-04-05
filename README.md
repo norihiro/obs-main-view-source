@@ -18,6 +18,18 @@ Enable this setting if one of these conditions applies.
 - You want to hide overflowing scene items outside the bounding box of the main view.
 - You want to put the source on the main view to enjoy fractals.
 
+### Render before output/display rendering
+
+*Deprecated*
+
+Render the texture before OBS start to render output and each display.
+Recommended to enable if
+- You want to have the source in a nested scene.
+
+If enabled, since the order of rendering sources changes, something might be affected.
+
+If no issues are reported with disabling this property, this property might be dropped in the future and fixed to enabled.
+
 ## Build and install
 ### Linux
 Use cmake to build on Linux. After checkout, run these commands.
