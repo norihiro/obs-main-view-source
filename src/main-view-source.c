@@ -40,7 +40,6 @@ static obs_properties_t *get_properties(void *data)
 	obs_property_t *prop;
 
 	prop = obs_properties_add_bool(props, "cache", obs_module_text("Cache the main view"));
-	// TODO: set modified callback and toggle availability of offsceeen_render
 	obs_properties_add_bool(props, "offsceeen_render", obs_module_text("Render before output/display rendering"));
 
 	obs_property_set_modified_callback(prop, cache_modified);
