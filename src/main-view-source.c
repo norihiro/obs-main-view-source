@@ -124,7 +124,7 @@ static void cache_video(struct main_view_s *s, obs_source_t *target)
 {
 	gs_texrender_t *texrender = s->texrender_prev;
 	if (!texrender)
-		texrender = gs_texrender_create(GS_BGRA, GS_ZS_NONE);
+		s->texrender_prev = texrender = gs_texrender_create(GS_BGRA, GS_ZS_NONE);
 	else
 		gs_texrender_reset(texrender);
 
