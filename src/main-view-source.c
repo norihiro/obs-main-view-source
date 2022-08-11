@@ -12,11 +12,9 @@ struct main_view_s
 
 	gs_texrender_t *texrender;
 	gs_texrender_t *texrender_prev;
-	bool rendered;
 
 	// properties
-	bool cache;
-	bool offsceeen_render;
+	bool offscreen_render;
 };
 
 static const char *get_name(void *type_data)
@@ -25,31 +23,16 @@ static const char *get_name(void *type_data)
 	return obs_module_text("Main View Source");
 }
 
-static bool cache_modified(obs_properties_t *props, obs_property_t *property, obs_data_t *settings)
-{
-	bool cache = obs_data_get_bool(settings, "cache");
-	obs_property_t *offsceeen_render = obs_properties_get(props, "offsceeen_render");
-	obs_property_set_enabled(offsceeen_render, cache);
-	return true;
-}
-
 static obs_properties_t *get_properties(void *data)
 {
 	UNUSED_PARAMETER(data);
 	obs_properties_t *props = obs_properties_create();
-	obs_property_t *prop;
-
-	prop = obs_properties_add_bool(props, "cache", obs_module_text("Cache the main view"));
-	obs_properties_add_bool(props, "offsceeen_render", obs_module_text("Render before output/display rendering"));
-
-	obs_property_set_modified_callback(prop, cache_modified);
 
 	return props;
 }
 
 static void get_defaults(obs_data_t *defaults)
 {
-	obs_data_set_default_bool(defaults, "offsceeen_render", true);
 }
 
 static void main_view_offscreen_render_cb(void *data, uint32_t cx, uint32_t cy);
@@ -68,14 +51,9 @@ static void update(void *data, obs_data_t *settings)
 {
 	struct main_view_s *s = data;
 
-	s->cache = obs_data_get_bool(settings, "cache");
-	bool offsceeen_render = obs_data_get_bool(settings, "offsceeen_render") & s->cache;
-
-	if (offsceeen_render && !s->offsceeen_render)
+	if (!s->offscreen_render)
 		register_offscreen_render(s);
-	else if (!offsceeen_render && s->offsceeen_render)
-		unregister_offscreen_render(s);
-	s->offsceeen_render = offsceeen_render;
+	s->offscreen_render = true;
 }
 
 static void *create(obs_data_t *settings, obs_source_t *source)
@@ -100,7 +78,7 @@ static void destroy(void *data)
 	gs_texrender_destroy(s->texrender);
 	gs_texrender_destroy(s->texrender_prev);
 	obs_leave_graphics();
-	if (s->offsceeen_render)
+	if (s->offscreen_render)
 		unregister_offscreen_render(s);
 
 	bfree(s);
@@ -116,8 +94,6 @@ static void video_tick(void *data, float seconds)
 	obs_source_t *target = obs_get_output_source(0);
 	s->weak_source = obs_source_get_weak_source(target);
 	obs_source_release(target);
-
-	s->rendered = false;
 }
 
 static void cache_video(struct main_view_s *s, obs_source_t *target)
@@ -146,8 +122,6 @@ static void cache_video(struct main_view_s *s, obs_source_t *target)
 
 		s->texrender_prev = s->texrender;
 		s->texrender = texrender;
-
-		s->rendered = true;
 	}
 }
 
@@ -177,10 +151,6 @@ static void main_view_offscreen_render_cb(void *data, uint32_t cx, uint32_t cy)
 	UNUSED_PARAMETER(cy);
 	struct main_view_s *s = data;
 
-	/* If the source has already been rendered, for example by Source Record, do nothing. */
-	if (s->rendered)
-		return;
-
 	if (!obs_source_showing(s->context))
 		return;
 
@@ -198,31 +168,7 @@ static void video_render(void *data, gs_effect_t *effect)
 	UNUSED_PARAMETER(effect);
 	struct main_view_s *s = data;
 
-	if (s->rendered) {
-		render_cached_video(s);
-		return;
-	}
-
-	bool cache = s->cache;
-	if (s->rendering) {
-		if (cache)
-			render_cached_video(s);
-		return;
-	}
-
-	obs_source_t *target = obs_weak_source_get_source(s->weak_source);
-	if (target) {
-		s->rendering = true;
-		if (cache)
-			cache_video(s, target);
-		else
-			obs_source_video_render(target);
-		obs_source_release(target);
-		s->rendering = false;
-	}
-
-	if (cache && s->rendered)
-		render_cached_video(s);
+	render_cached_video(s);
 }
 
 static uint32_t get_width(void *data)
