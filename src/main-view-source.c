@@ -31,9 +31,7 @@ static obs_properties_t *get_properties(void *data)
 	return props;
 }
 
-static void get_defaults(obs_data_t *defaults)
-{
-}
+static void get_defaults(obs_data_t *defaults) {}
 
 static void main_view_offscreen_render_cb(void *data, uint32_t cx, uint32_t cy);
 
