@@ -16,10 +16,6 @@ set(LINUX_MAINTAINER_EMAIL "norihiro@nagater.net")
 
 # TAKE NOTE: No need to edit things past this point
 
-# In case you need C++
-set(CMAKE_CXX_STANDARD 11)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-
 find_package(libobs REQUIRED)
 include(cmake/ObsPluginHelpers.cmake)
 
