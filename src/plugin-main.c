@@ -29,7 +29,7 @@ extern const struct obs_source_info main_view_source;
 bool obs_module_load(void)
 {
 	obs_register_source(&main_view_source);
-	blog(LOG_INFO, "plugin loaded successfully (version %s)", PLUGIN_VERSION);
+	blog(LOG_INFO, "plugin loaded (version %s)", PLUGIN_VERSION);
 	return true;
 }
 
