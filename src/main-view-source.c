@@ -6,7 +6,7 @@
 struct main_view_s
 {
 	obs_source_t *context;
-	bool rendering;
+	bool rendered;
 
 	obs_weak_source_t *weak_source;
 
@@ -92,6 +92,8 @@ static void video_tick(void *data, float seconds)
 	obs_source_t *target = obs_get_output_source(0);
 	s->weak_source = obs_source_get_weak_source(target);
 	obs_source_release(target);
+
+	s->rendered = false;
 }
 
 static void cache_video(struct main_view_s *s, obs_source_t *target)
@@ -152,12 +154,15 @@ static void main_view_offscreen_render_cb(void *data, uint32_t cx, uint32_t cy)
 	if (!obs_source_showing(s->context))
 		return;
 
+	// When virtual camera is enabled with scene or source type, this callback is called twice or more.
+	if (s->rendered)
+		return;
+	s->rendered = true;
+
 	obs_source_t *target = obs_weak_source_get_source(s->weak_source);
 	if (target) {
-		s->rendering = true;
 		cache_video(s, target);
 		obs_source_release(target);
-		s->rendering = false;
 	}
 }
 
