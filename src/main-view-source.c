@@ -31,8 +31,6 @@ static obs_properties_t *get_properties(void *data)
 	return props;
 }
 
-static void get_defaults(obs_data_t *defaults) {}
-
 static void main_view_offscreen_render_cb(void *data, uint32_t cx, uint32_t cy);
 
 static void register_offscreen_render(struct main_view_s *s)
@@ -47,6 +45,8 @@ static void unregister_offscreen_render(struct main_view_s *s)
 
 static void update(void *data, obs_data_t *settings)
 {
+	UNUSED_PARAMETER(settings);
+
 	struct main_view_s *s = data;
 
 	if (!s->offscreen_render)
@@ -56,8 +56,6 @@ static void update(void *data, obs_data_t *settings)
 
 static void *create(obs_data_t *settings, obs_source_t *source)
 {
-	UNUSED_PARAMETER(settings);
-
 	struct main_view_s *s = bzalloc(sizeof(struct main_view_s));
 
 	s->context = source;
@@ -204,7 +202,6 @@ const struct obs_source_info main_view_source = {
 	.create = create,
 	.destroy = destroy,
 	.get_properties = get_properties,
-	.get_defaults = get_defaults,
 	.update = update,
 	.video_tick = video_tick,
 	.video_render = video_render,
