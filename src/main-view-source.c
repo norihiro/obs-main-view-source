@@ -20,7 +20,7 @@ struct main_view_s
 static const char *get_name(void *type_data)
 {
 	UNUSED_PARAMETER(type_data);
-	return obs_module_text("Main View Source");
+	return obs_module_text("Source.Name");
 }
 
 static obs_properties_t *get_properties(void *data)
