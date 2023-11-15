@@ -3,15 +3,23 @@
 #include <util/dstr.h>
 #include "plugin-macros.generated.h"
 
+#if LIBOBS_API_VER >= MAKE_SEMANTIC_VERSION(29, 1, 0)
+#define USE_RENDERED_CALLBACK
+#endif
+
 struct main_view_s
 {
 	obs_source_t *context;
 	bool rendered;
 
+#ifndef USE_RENDERED_CALLBACK
 	obs_weak_source_t *weak_source;
 
 	gs_texrender_t *texrender;
 	gs_texrender_t *texrender_prev;
+#else
+	gs_texture_t *cached_texture;
+#endif
 
 	bool offscreen_render;
 };
@@ -30,16 +38,28 @@ static obs_properties_t *get_properties(void *data)
 	return props;
 }
 
+#ifndef USE_RENDERED_CALLBACK
 static void main_view_offscreen_render_cb(void *data, uint32_t cx, uint32_t cy);
+#else
+static void main_view_rendered_callback(void *data);
+#endif
 
 static void register_offscreen_render(struct main_view_s *s)
 {
+#ifndef USE_RENDERED_CALLBACK
 	obs_add_main_render_callback(main_view_offscreen_render_cb, s);
+#else
+	obs_add_main_rendered_callback(main_view_rendered_callback, s);
+#endif
 }
 
 static void unregister_offscreen_render(struct main_view_s *s)
 {
+#ifndef USE_RENDERED_CALLBACK
 	obs_remove_main_render_callback(main_view_offscreen_render_cb, s);
+#else
+	obs_remove_main_rendered_callback(main_view_rendered_callback, s);
+#endif
 }
 
 static void update(void *data, obs_data_t *settings)
@@ -71,11 +91,17 @@ static void destroy(void *data)
 	if (s->offscreen_render)
 		unregister_offscreen_render(s);
 
+#ifndef USE_RENDERED_CALLBACK
 	obs_weak_source_release(s->weak_source);
+#endif
 
 	obs_enter_graphics();
+#ifndef USE_RENDERED_CALLBACK
 	gs_texrender_destroy(s->texrender);
 	gs_texrender_destroy(s->texrender_prev);
+#else
+	gs_texture_destroy(s->cached_texture);
+#endif
 	obs_leave_graphics();
 
 	bfree(s);
@@ -86,15 +112,18 @@ static void video_tick(void *data, float seconds)
 	UNUSED_PARAMETER(seconds);
 	struct main_view_s *s = data;
 
+#ifndef USE_RENDERED_CALLBACK
 	obs_weak_source_release(s->weak_source);
 
 	obs_source_t *target = obs_get_output_source(0);
 	s->weak_source = obs_source_get_weak_source(target);
 	obs_source_release(target);
+#endif
 
 	s->rendered = false;
 }
 
+#ifndef USE_RENDERED_CALLBACK
 static void cache_video(struct main_view_s *s, obs_source_t *target)
 {
 	gs_texrender_t *texrender = s->texrender_prev;
@@ -124,9 +153,33 @@ static void cache_video(struct main_view_s *s, obs_source_t *target)
 	}
 }
 
+#else
+
+static void cache_texture(struct main_view_s *s, gs_texture_t *src_tex)
+{
+	uint32_t width = gs_texture_get_width(src_tex);
+	uint32_t height = gs_texture_get_height(src_tex);
+	enum gs_color_format format = gs_texture_get_color_format(src_tex);
+
+	gs_texture_t *dst_tex = s->cached_texture;
+
+	if (!dst_tex || gs_texture_get_width(dst_tex) != width || gs_texture_get_height(dst_tex) != height ||
+	    gs_texture_get_color_format(dst_tex) != format) {
+		gs_texture_destroy(dst_tex);
+		dst_tex = s->cached_texture = gs_texture_create(width, height, format, 1, NULL, GS_RENDER_TARGET);
+	}
+
+	gs_copy_texture(dst_tex, src_tex);
+}
+#endif // USE_RENDERED_CALLBACK
+
 static void render_cached_video(struct main_view_s *s)
 {
+#ifndef USE_RENDERED_CALLBACK
 	gs_texture_t *tex = gs_texrender_get_texture(s->texrender);
+#else
+	gs_texture_t *tex = s->cached_texture;
+#endif
 	if (!tex)
 		return;
 
@@ -144,6 +197,7 @@ static void render_cached_video(struct main_view_s *s)
 	gs_blend_state_pop();
 }
 
+#ifndef USE_RENDERED_CALLBACK
 static void main_view_offscreen_render_cb(void *data, uint32_t cx, uint32_t cy)
 {
 	UNUSED_PARAMETER(cx);
@@ -164,6 +218,28 @@ static void main_view_offscreen_render_cb(void *data, uint32_t cx, uint32_t cy)
 		obs_source_release(target);
 	}
 }
+
+#else
+
+static void main_view_rendered_callback(void *data)
+{
+	struct main_view_s *s = data;
+
+	if (!obs_source_showing(s->context))
+		return;
+
+	// When virtual camera is enabled with scene or source type, this callback is called twice or more.
+	if (s->rendered)
+		return;
+
+	gs_texture_t *tex = obs_get_main_texture();
+	if (!tex)
+		return;
+
+	s->rendered = true;
+	cache_texture(s, tex);
+}
+#endif
 
 static void video_render(void *data, gs_effect_t *effect)
 {
