@@ -25,10 +25,14 @@ OBS_DECLARE_MODULE()
 OBS_MODULE_USE_DEFAULT_LOCALE(PLUGIN_NAME, "en-US")
 
 extern const struct obs_source_info main_view_source;
+extern const struct obs_source_info main_audio_source;
+extern const struct obs_source_info main_view_audio_source;
 
 bool obs_module_load(void)
 {
 	obs_register_source(&main_view_source);
+	obs_register_source(&main_view_audio_source);
+	obs_register_source(&main_audio_source);
 	blog(LOG_INFO, "plugin loaded (version %s)", PLUGIN_VERSION);
 	return true;
 }
