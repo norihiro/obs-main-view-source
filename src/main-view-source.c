@@ -68,13 +68,15 @@ static void destroy(void *data)
 {
 	struct main_view_s *s = data;
 
+	if (s->offscreen_render)
+		unregister_offscreen_render(s);
+
 	obs_weak_source_release(s->weak_source);
+
 	obs_enter_graphics();
 	gs_texrender_destroy(s->texrender);
 	gs_texrender_destroy(s->texrender_prev);
 	obs_leave_graphics();
-	if (s->offscreen_render)
-		unregister_offscreen_render(s);
 
 	bfree(s);
 }
