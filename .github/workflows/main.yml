@@ -5,7 +5,7 @@ on:
     paths-ignore:
       - '**.md'
     branches:
-      - main
+      - '*'
     tags:
       - '*'
   pull_request:
@@ -278,7 +278,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        obs: [27]
+        obs: [27, 30]
         arch: [x64]
     env:
       visualStudio: 'Visual Studio 17 2022'
@@ -293,7 +293,7 @@ jobs:
           submodules: recursive
       - name: Download obs-studio
         id: obsdeps
-        uses: norihiro/obs-studio-devel-action@v1-beta
+        uses: norihiro/obs-studio-devel-action@devel
         with:
           obs: ${{ matrix.obs }}
           qt: ${{ env.qt }}
