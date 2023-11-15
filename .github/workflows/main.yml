@@ -24,8 +24,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        obs: [27, 28]
-        ubuntu: ['ubuntu-20.04']
+        include:
+          - obs: 27
+            ubuntu: 'ubuntu-20.04'
+          - obs: 28
+            ubuntu: 'ubuntu-20.04'
+          - obs: 30
+            ubuntu: 'ubuntu-22.04'
     defaults:
       run:
         shell: bash
@@ -37,7 +42,7 @@ jobs:
 
       - name: Download obs-studio development environment
         id: obsdeps
-        uses: norihiro/obs-studio-devel-action@v1-beta
+        uses: norihiro/obs-studio-devel-action@devel
         with:
           obs: ${{ matrix.obs }}
           verbose: true
@@ -58,6 +63,11 @@ jobs:
             28)
               cmake_opt=(
                 -D CPACK_DEBIAN_PACKAGE_DEPENDS='obs-studio (>= 28)'
+              )
+              ;;
+            30)
+              cmake_opt=(
+                -D CPACK_DEBIAN_PACKAGE_DEPENDS='obs-studio (>= 30)'
               )
               ;;
           esac
@@ -85,6 +95,7 @@ jobs:
           case ${{ matrix.obs }} in
             27) plugins_dir=/usr/lib/obs-plugins ;;
             28) plugins_dir=/usr/lib/x86_64-linux-gnu/obs-plugins ;;
+            30) plugins_dir=/usr/lib/x86_64-linux-gnu/obs-plugins ;;
           esac
           ldd $plugins_dir/${PLUGIN_NAME}.so > ldd.out
           if grep not.found ldd.out ; then
