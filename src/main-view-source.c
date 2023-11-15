@@ -13,7 +13,6 @@ struct main_view_s
 	gs_texrender_t *texrender;
 	gs_texrender_t *texrender_prev;
 
-	// properties
 	bool offscreen_render;
 };
 
