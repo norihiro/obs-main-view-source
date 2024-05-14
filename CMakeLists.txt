@@ -10,6 +10,7 @@ set(MACOS_BUNDLEID "net.nagater.obs-main-view-source")
 set(ID_PREFIX "net.nagater.obs-main-view-source.")
 set(MACOS_PACKAGE_UUID "BE89E243-A0FD-49E7-82BC-57D451D81D38")
 set(MACOS_INSTALLER_UUID "F2AFC1AC-4C21-4B6E-8F23-B506D0156D96")
+set(PLUGIN_URL "https://obsproject.com/forum/resources/main-view-source.1501/")
 
 # Replace `me@contoso.com` with the maintainer email address you want to put in Linux packages
 set(LINUX_MAINTAINER_EMAIL "norihiro@nagater.net")
