@@ -1,4 +1,4 @@
-# OBS Main View Source
+# Main View Source plugin for OBS Studio
 
 ## Introduction
 
