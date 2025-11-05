@@ -24,8 +24,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        obs: [27, 28]
-        ubuntu: ['ubuntu-22.04']
+        include:
+          - obs: 28
+            ubuntu: 'ubuntu-22.04'
+          - obs: 30
+            ubuntu: 'ubuntu-22.04'
+          - obs: 32
+            ubuntu: 'ubuntu-24.04'
     defaults:
       run:
         shell: bash
@@ -37,7 +42,7 @@ jobs:
 
       - name: Download obs-studio development environment
         id: obsdeps
-        uses: norihiro/obs-studio-devel-action@v1-beta
+        uses: norihiro/obs-studio-devel-action@v2
         with:
           obs: ${{ matrix.obs }}
           verbose: true
@@ -45,30 +50,13 @@ jobs:
 
       - name: Build plugin
         run: |
-          OBS_QT_VERSION_MAJOR=${{ steps.obsdeps.outputs.OBS_QT_VERSION_MAJOR }}
-          mkdir build
-          cd build
-          case ${{ matrix.obs }} in
-            27)
-              cmake_opt=(
-                -D CMAKE_INSTALL_LIBDIR=/usr/lib/
-                -D CPACK_DEBIAN_PACKAGE_DEPENDS='obs-studio (>= 27), obs-studio (<< 28)'
-              )
-              ;;
-            28)
-              cmake_opt=(
-                -D CPACK_DEBIAN_PACKAGE_DEPENDS='obs-studio (>= 28)'
-              )
-              ;;
-          esac
-          cmake .. \
-            -D QT_VERSION=$OBS_QT_VERSION_MAJOR \
-            -D CMAKE_INSTALL_PREFIX=/usr \
+          set -ex
+          cmake -S . -B build \
             -D CMAKE_BUILD_TYPE=RelWithDebInfo \
-            -D LINUX_PORTABLE=OFF \
             -D CPACK_DEBIAN_PACKAGE_SHLIBDEPS=ON \
             -D PKG_SUFFIX=-obs${{ matrix.obs }}-${{ matrix.ubuntu }}-x86_64 \
-            "${cmake_opt[@]}"
+            ${{ steps.obsdeps.outputs.PLUGIN_CMAKE_OPTIONS }}
+          cd build
           make -j4
           make package
           echo "FILE_NAME=$(find $PWD -name '*.deb' | head -n 1)" >> $GITHUB_ENV
@@ -79,14 +67,10 @@ jobs:
           path: '${{ env.FILE_NAME }}'
       - name: Check package
         run: |
-          . ci/ci_includes.generated.sh
+          . build/ci/ci_includes.generated.sh
           set -ex
-          sudo apt install '${{ env.FILE_NAME }}'
-          case ${{ matrix.obs }} in
-            27) plugins_dir=/usr/lib/obs-plugins ;;
-            28) plugins_dir=/usr/lib/x86_64-linux-gnu/obs-plugins ;;
-          esac
-          ldd $plugins_dir/${PLUGIN_NAME}.so > ldd.out
+          sudo apt install -y '${{ env.FILE_NAME }}'
+          ldd /usr/lib/x86_64-linux-gnu/obs-plugins/${PLUGIN_NAME}.so > ldd.out
           if grep not.found ldd.out ; then
             echo "Error: unresolved shared object." >&2
             exit 1
@@ -98,11 +82,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - obs: 27
-            arch: x86_64
-          - obs: 28
-            arch: universal
+        obs: [28, 30, 32]
+        arch: ['universal']
     defaults:
       run:
         shell: bash
@@ -120,28 +101,28 @@ jobs:
           if [[ '${{ secrets.MACOS_SIGNING_APPLICATION_IDENTITY }}' != '' && \
                 '${{ secrets.MACOS_SIGNING_INSTALLER_IDENTITY }}' != '' && \
                 '${{ secrets.MACOS_SIGNING_CERT }}' != '' ]]; then
-            echo '::set-output name=haveCodesignIdent::true'
+            echo "haveCodesignIdent=true" >> $GITHUB_OUTPUT
           else
-            echo '::set-output name=haveCodesignIdent::false'
+            echo "haveCodesignIdent=false" >> $GITHUB_OUTPUT
           fi
           if [[ '${{ secrets.MACOS_NOTARIZATION_USERNAME }}' != '' && \
                 '${{ secrets.MACOS_NOTARIZATION_PASSWORD }}' != '' ]]; then
-            echo '::set-output name=haveNotarizationUser::true'
+            echo "haveNotarizationUser=true" >> $GITHUB_OUTPUT
           else
-            echo '::set-output name=haveNotarizationUser::false'
+            echo "haveNotarizationUser=false" >> $GITHUB_OUTPUT
           fi
           echo '::endgroup::'
 
       - name: Install Apple Developer Certificate
         if: ${{ github.event_name != 'pull_request' && steps.setup.outputs.haveCodesignIdent == 'true' }}
-        uses: apple-actions/import-codesign-certs@253ddeeac23f2bdad1646faac5c8c2832e800071
+        uses: apple-actions/import-codesign-certs@63fff01cd422d4b7b855d40ca1e9d34d2de9427d # v3.0.0
         with:
           keychain-password: ${{ github.run_id }}
           p12-file-base64: ${{ secrets.MACOS_SIGNING_CERT }}
           p12-password: ${{ secrets.MACOS_SIGNING_CERT_PASSWORD }}
 
       - name: Set Signing Identity
-        if: ${{ startsWith(github.ref, 'refs/tags/') && github.event_name != 'pull_request' && steps.setup.outputs.haveCodesignIdent == 'true' }}
+        if: ${{ startsWith(github.ref, 'refs/tags/') && github.event_name != 'pull_request' && steps.setup.outputs.haveCodesignIdent == 'true' && steps.setup.outputs.haveNotarizationUser == 'true' }}
         run: |
           set -e
           TEAM_ID=$(echo "${{ secrets.MACOS_SIGNING_APPLICATION_IDENTITY }}" | sed 's/.*(\([A-Za-z0-9]*\))$/\1/')
@@ -152,7 +133,7 @@ jobs:
 
       - name: Download obs-studio development environment
         id: obsdeps
-        uses: norihiro/obs-studio-devel-action@v1-beta
+        uses: norihiro/obs-studio-devel-action@v2
         with:
           path: /tmp/deps-${{ matrix.obs }}-${{ matrix.arch }}
           arch: ${{ matrix.arch }}
@@ -165,68 +146,34 @@ jobs:
           arch=${{ matrix.arch }}
           deps=/tmp/deps-${{ matrix.obs }}-${{ matrix.arch }}
           MACOSX_DEPLOYMENT_TARGET=${{ steps.obsdeps.outputs.MACOSX_DEPLOYMENT_TARGET }}
-          OBS_QT_VERSION_MAJOR=${{ steps.obsdeps.outputs.OBS_QT_VERSION_MAJOR }}
           GIT_TAG=$(git describe --tags --always)
           PKG_SUFFIX=-${GIT_TAG}-obs${{ matrix.obs }}-macos-${{ matrix.arch }}
           set -e
-          case "${{ matrix.obs }}" in
-            27)
-              cmake_opt=()
-              ;;
-            28)
-              cmake_opt=(
-                -D MACOSX_PLUGIN_BUNDLE_TYPE=BNDL
-                -D OBS_BUNDLE_CODESIGN_IDENTITY='${{ secrets.MACOS_SIGNING_APPLICATION_IDENTITY }}'
-              )
-              ;;
-          esac
           cmake -S . -B build -G Ninja \
-            -D QT_VERSION=$OBS_QT_VERSION_MAJOR \
             -DCMAKE_BUILD_TYPE=RelWithDebInfo \
             -DCMAKE_PREFIX_PATH="$PWD/release/" \
             -DCMAKE_OSX_ARCHITECTURES=${arch/#universal/x86_64;arm64} \
-            -DCMAKE_OSX_DEPLOYMENT_TARGET=${MACOSX_DEPLOYMENT_TARGET} \
-            -DCMAKE_FRAMEWORK_PATH="$deps/Frameworks;$deps/lib/cmake;$deps" \
             -D PKG_SUFFIX=$PKG_SUFFIX \
-            "${cmake_opt[@]}"
+            -D OBS_BUNDLE_CODESIGN_IDENTITY='${{ secrets.MACOS_SIGNING_APPLICATION_IDENTITY }}' \
+            ${{ steps.obsdeps.outputs.PLUGIN_CMAKE_OPTIONS }}
           cmake --build build --config RelWithDebInfo
-          echo "PKG_SUFFIX='$PKG_SUFFIX'" >> ci/ci_includes.generated.sh
 
       - name: Prepare package
         run: |
           set -ex
-          . ci/ci_includes.generated.sh
+          . build/ci/ci_includes.generated.sh
           cmake --install build --config RelWithDebInfo --prefix=release
-          case ${{ matrix.obs }} in
-            27)
-              (cd release/${PLUGIN_NAME} && ../../ci/macos/change-rpath.sh -obs ${{ matrix.obs }} -lib lib/ bin/${PLUGIN_NAME}.so)
-              cp LICENSE release/${PLUGIN_NAME}/data/LICENSE-$PLUGIN_NAME
-              ;;
-            28)
-              (cd release/${PLUGIN_NAME}.plugin/Contents && ../../../ci/macos/change-rpath.sh -obs 28 -lib lib/ MacOS/${PLUGIN_NAME})
-              cp LICENSE release/${PLUGIN_NAME}.plugin/Contents/Resources/LICENSE-$PLUGIN_NAME
-              ;;
-          esac
+          cp LICENSE release/${PLUGIN_NAME}.plugin/Contents/Resources/LICENSE-$PLUGIN_NAME
 
       - name: Codesign
         if: ${{ github.event_name != 'pull_request' && steps.setup.outputs.haveCodesignIdent == 'true' }}
         run: |
-          . ci/ci_includes.generated.sh
+          . build/ci/ci_includes.generated.sh
           set -ex
-          case ${{ matrix.obs }} in
-            27)
-              files=(
-                $(find release/${PLUGIN_NAME}/ -name '*.dylib')
-                release/${PLUGIN_NAME}/bin/${PLUGIN_NAME}.so
-              )
-              ;;
-            28)
-              files=(
-                $(find release/${PLUGIN_NAME}.plugin/ -name '*.dylib')
-                release/${PLUGIN_NAME}.plugin/Contents/MacOS/${PLUGIN_NAME}
-              )
-              ;;
-          esac
+          files=(
+            $(find release/${PLUGIN_NAME}.plugin/ -name '*.dylib')
+            release/${PLUGIN_NAME}.plugin/Contents/MacOS/${PLUGIN_NAME}
+          )
           for dylib in "${files[@]}"; do
             codesign --force --sign "${{ secrets.MACOS_SIGNING_APPLICATION_IDENTITY }}" "$dylib"
           done
@@ -236,14 +183,11 @@ jobs:
 
       - name: Package
         run: |
-          . ci/ci_includes.generated.sh
+          . build/ci/ci_includes.generated.sh
           set -ex
           zipfile=$PWD/package/${PLUGIN_NAME}${PKG_SUFFIX}.zip
           mkdir package
-          case ${{ matrix.obs }} in
-            27) (cd release/ && zip -r $zipfile ${PLUGIN_NAME}) ;;
-            28) (cd release/ && zip -r $zipfile ${PLUGIN_NAME}.plugin) ;;
-          esac
+          (cd release/ && zip -r $zipfile ${PLUGIN_NAME}.plugin)
           ci/macos/install-packagesbuild.sh
           packagesbuild \
             --build-folder $PWD/package/ \
@@ -252,10 +196,9 @@ jobs:
       - name: Productsign
         if: ${{ github.event_name != 'pull_request' && steps.setup.outputs.haveCodesignIdent == 'true' }}
         run: |
-          . ci/ci_includes.generated.sh
+          . build/ci/ci_includes.generated.sh
           pkgfile=package/${PLUGIN_NAME}${PKG_SUFFIX}.pkg
           set -e
-          . ci/ci_includes.generated.sh
           productsign --sign "${{ secrets.MACOS_SIGNING_INSTALLER_IDENTITY }}" $pkgfile package/${PLUGIN_NAME}-signed.pkg
           mv package/${PLUGIN_NAME}-signed.pkg $pkgfile
 
@@ -278,7 +221,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        obs: [27]
+        obs: [28, 30, 32]
         arch: [x64]
     env:
       visualStudio: 'Visual Studio 17 2022'
@@ -293,21 +236,17 @@ jobs:
           submodules: recursive
       - name: Download obs-studio
         id: obsdeps
-        uses: norihiro/obs-studio-devel-action@v1-beta
+        uses: norihiro/obs-studio-devel-action@v2
         with:
           obs: ${{ matrix.obs }}
           qt: ${{ env.qt }}
-
       - name: Build plugin
         run: |
           $CmakeArgs = @(
             '-G', "${{ env.visualStudio }}"
-            '-DQT_VERSION=${{ steps.obsdeps.outputs.OBS_QT_VERSION_MAJOR }}'
             '-DCMAKE_SYSTEM_VERSION=10.0.18363.657'
-            "-DCMAKE_INSTALL_PREFIX=$(Resolve-Path -Path "./obs-build-dependencies/plugin-deps-${{ matrix.arch }}")"
-            "-DCMAKE_PREFIX_PATH=$(Resolve-Path -Path "./obs-build-dependencies/plugin-deps-${{ matrix.arch }}")"
           )
-          cmake -S . -B build @CmakeArgs
+          cmake -S . -B build ${{ steps.obsdeps.outputs.PLUGIN_CMAKE_OPTIONS_PS }} @CmakeArgs
           cmake --build build --config RelWithDebInfo -j 4
           cmake --install build --config RelWithDebInfo --prefix "$(Resolve-Path -Path .)/release"
       - name: Package plugin

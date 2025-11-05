@@ -1,13 +1,10 @@
-#define MyAppName "@CMAKE_PROJECT_NAME@"
-#define MyAppVersion "@CMAKE_PROJECT_VERSION@"
+#define MyAppName "@PROJECT_NAME@"
+#define MyAppVersion "@PROJECT_VERSION@"
 #define MyAppPublisher "@PLUGIN_AUTHOR@"
 #define MyAppURL "@PLUGIN_URL@"
 
 [Setup]
-; NOTE: The value of AppId uniquely identifies this application.
-; Do not use the same AppId value in installers for other applications.
-; (To generate a new GUID, click Tools | Generate GUID inside the IDE.)
-AppId={{CC838872-7288-47CC-AC50-5554A765CB88}
+AppId={{@WIN_INSTALLER_UUID@}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
 AppPublisher={#MyAppPublisher}

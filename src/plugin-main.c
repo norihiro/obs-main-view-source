@@ -26,14 +26,14 @@ OBS_MODULE_USE_DEFAULT_LOCALE(PLUGIN_NAME, "en-US")
 
 extern const struct obs_source_info main_view_source;
 
+const char *obs_module_name(void)
+{
+	return obs_module_text("Module.Name");
+}
+
 bool obs_module_load(void)
 {
 	obs_register_source(&main_view_source);
 	blog(LOG_INFO, "plugin loaded (version %s)", PLUGIN_VERSION);
 	return true;
-}
-
-void obs_module_unload()
-{
-	blog(LOG_INFO, "plugin unloaded");
 }
