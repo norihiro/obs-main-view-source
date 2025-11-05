@@ -60,6 +60,10 @@ endif()
 
 if(OS_LINUX)
 	target_compile_options(${CMAKE_PROJECT_NAME} PRIVATE -Wall -Wextra)
+
+	if(CMAKE_C_COMPILER_ID STREQUAL GNU)
+		target_compile_options(${PROJECT_NAME} PRIVATE -fanalyzer)
+	endif()
 endif()
 
 if(APPLE)
