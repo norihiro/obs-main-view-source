@@ -1,0 +1,18 @@
+Source: main-view-source-for-obs
+Section: video
+Priority: optional
+Maintainer: Norihiro Kamae <norihiro-ppa-plugins-for-obs-studio@nagater.net>
+Rules-Requires-Root: no
+Build-Depends:
+ debhelper-compat (= 13),
+ cmake,
+ obs-studio,
+ libsimde-dev
+Standards-Version: 4.6.0
+Homepage: https://github.com/norihiro/obs-main-view-source/
+
+Package: main-view-source-for-obs-for-obs
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: Main view source plugin for OBS Studio
+
